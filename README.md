@@ -164,13 +164,10 @@ The following is a detailed description of the available API endpoints. For a co
 - **AioMySQL**: An async library for accessing a MySQL database.
 - **Uvicorn**: An ASGI server for running FastAPI applications.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
 ## Contact
 
 If you have any questions or feedback, please feel free to reach out.
 
-- **Author**: Your Name
-- **Email**: your.email@example.com
+- **Author**: Ege-Obetta Amarachi
+- **Email**: amy1234obetta@gmail.com
