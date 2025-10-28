@@ -16,9 +16,9 @@ async def list_countries(session: AsyncSession, region=None, currency=None, sort
         q = q.where(Country.currency_code == currency)
     if sort:
         if sort == "gdp_desc":
-            q = q.order_by(Country.estimated_gdp.desc().nullslast())
+            q = q.order_by(Country.estimated_gdp.desc())
         elif sort == "gdp_asc":
-            q = q.order_by(Country.estimated_gdp.asc().nullslast())
+            q = q.order_by(Country.estimated_gdp.asc())
         elif sort == "name_asc":
             q = q.order_by(Country.name.asc())
     res = await session.execute(q)
