@@ -26,6 +26,7 @@ def error_400(details: dict):
 async def refresh_countries(session: AsyncSession = Depends(get_session)):
     try:
         countries_data = utils.fetch_countries()
+
     except Exception as e:
         return JSONResponse(status_code=503, content={"error": "External data source unavailable", "details": "Could not fetch data from Countries API"})
 
@@ -34,36 +35,41 @@ async def refresh_countries(session: AsyncSession = Depends(get_session)):
     except Exception as e:
         return JSONResponse(status_code=503, content={"error": "External data source unavailable", "details": "Could not fetch data from Exchange Rates API"})
 
+    countries_data = utils.fetch_countries()
+        
     processed = []
     for c in countries_data:
-        name = c.get("name")
+        if not isinstance(c, dict):
+            continue
+    
+        name = c.get("names", {}).get("common")
         if not name:
-            continue  
-        capital = c.get("capital")
+            continue
+
+        capitals_list = c.get("capitals", [])
+        capital = capitals_list[0].get("name") if capitals_list and isinstance(capitals_list[0], dict) else None 
+        
         region = c.get("region")
         population = c.get("population") if isinstance(c.get("population"), (int, float)) else 0
-        currencies = c.get("currencies") or []
-        flag = c.get("flag") or c.get("flags", {}).get("svg")
-        currency_code = None
+        
+        currencies_list = c.get("currencies", [])
+        currency_code = currencies_list[0].get("code") if currencies_list and isinstance(currencies_list[0], dict) else None 
+            
+        flag = c.get("flag", {}).get("url_svg") or c.get("flag", {}).get("url_png") 
+
         exchange_rate = None
         estimated_gdp = None
 
-        if isinstance(currencies, list) and len(currencies) > 0:
-            first = currencies[0]
-            if isinstance(first, dict):
-                currency_code = first.get("code")
-            elif isinstance(first, str):
-                currency_code = first
-            if currency_code:
-                exchange_rate = rates.get(currency_code)
-                if exchange_rate is not None:
-                    try:
-                        estimated_gdp = utils.compute_estimated_gdp(population, exchange_rate)
-                    except Exception:
-                        estimated_gdp = None
-                else:
-                    exchange_rate = None
+        if currency_code:
+            exchange_rate = rates.get(currency_code)
+            if exchange_rate is not None:
+                try:
+                    estimated_gdp = utils.compute_estimated_gdp(population, exchange_rate)
+                except Exception:
                     estimated_gdp = None
+            else:
+                exchange_rate = None
+                estimated_gdp = None
         else:
             currency_code = None
             exchange_rate = None
@@ -79,6 +85,7 @@ async def refresh_countries(session: AsyncSession = Depends(get_session)):
             "estimated_gdp": estimated_gdp,
             "flag_url": flag
         }
+        
         processed.append(payload)
 
     from datetime import datetime

@@ -17,7 +17,7 @@ class CountryResponse(CountryBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class StatusResponse(BaseModel):
     total_countries: int

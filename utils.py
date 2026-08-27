@@ -6,20 +6,49 @@ from PIL import Image, ImageDraw, ImageFont
 from dotenv import load_dotenv
 load_dotenv()
 
+API_KEY = os.getenv("REST_COUNTRIES_API_KEY")
 REFRESH_TIMEOUT = int(os.getenv("REFRESH_TIMEOUT", "30"))
 CACHE_IMAGE_PATH = os.getenv("CACHE_IMAGE_PATH", "cache/summary.png")
 
-RESTCOUNTRIES_URL = "https://restcountries.com/v2/all?fields=name,capital,region,population,flag,currencies"
+RESTCOUNTRIES_URL = "https://api.restcountries.com/countries/v5?response_fields=names,capitals,region,population,currencies,flag&pretty=1"
 EXCHANGE_RATES_URL = "https://open.er-api.com/v6/latest/USD"
 
 def fetch_countries():
+    base_url = "https://api.restcountries.com/countries/v5"
+    fields = "names,capitals,region,population,currencies,flag"
+    limit = 100
+    offset = 0
+    all_countries = []
+    
+    headers = {
+        "Authorization": f"Bearer {API_KEY}"
+    }
+
     try:
-        resp = requests.get(RESTCOUNTRIES_URL, timeout=REFRESH_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
+        while True:
+            paginated_url = f"{base_url}?response_fields={fields}&limit={limit}&offset={offset}"
+            
+            resp = requests.get(paginated_url, headers=headers, timeout=REFRESH_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            
+            if isinstance(data, dict):
+                page_results = data.get("data", {}).get("objects", [])
+            else:
+                page_results = data
+                
+            if not page_results:
+                break 
+            all_countries.extend(page_results)
+            
+            # If the page returns fewer than 100 items, we reached the end
+            if len(page_results) < limit:
+                break
+            offset += limit
+        return all_countries
     except Exception as e:
         raise RuntimeError(f"Countries API error: {e}")
-
+    
 def fetch_exchange_rates():
     try:
         resp = requests.get(EXCHANGE_RATES_URL, timeout=REFRESH_TIMEOUT)
