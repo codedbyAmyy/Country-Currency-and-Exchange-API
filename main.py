@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, status, Response
 from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,12 +13,18 @@ from datetime import datetime, timezone
 load_dotenv()
 CACHE_IMAGE_PATH = os.getenv("CACHE_IMAGE_PATH", "cache/summary.png")
 
-app = FastAPI(title="Country Currency & Exchange API")
-
-@app.on_event("startup")
-async def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    yield
+
+
+app = FastAPI(
+    title="Country Currency & Exchange API",
+    lifespan=lifespan,
+)
 
 def error_400(details: dict):
     return JSONResponse(status_code=400, content={"error": "Validation failed", "details": details})
