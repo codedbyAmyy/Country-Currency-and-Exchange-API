@@ -34,8 +34,6 @@ async def refresh_countries(session: AsyncSession = Depends(get_session)):
         rates = utils.fetch_exchange_rates()
     except Exception as e:
         return JSONResponse(status_code=503, content={"error": "External data source unavailable", "details": "Could not fetch data from Exchange Rates API"})
-
-    countries_data = utils.fetch_countries()
         
     processed = []
     for c in countries_data:
@@ -93,10 +91,11 @@ async def refresh_countries(session: AsyncSession = Depends(get_session)):
     for payload in processed:
         if payload.get("currency_code") and payload.get("exchange_rate"):
             payload["estimated_gdp"] = utils.compute_estimated_gdp(payload["population"], payload["exchange_rate"])
-        elif payload.get("currency_code") is None and payload.get("exchange_rate") is None:
+        else:
             payload["estimated_gdp"] = 0
-        await crud.upsert_country(session, payload)
-
+            
+    await crud.bulk_upsert_countries(session, processed)
+        
     total, _ = await crud.get_status(session)
     all_countries = await crud.list_countries(session)
     top5 = sorted([{
